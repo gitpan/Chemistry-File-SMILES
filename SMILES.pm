@@ -1,6 +1,6 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.20";
+$VERSION = "0.21";
 use 5.006001;
 use strict;
 use warnings;
@@ -33,7 +33,9 @@ Chemistry::Mol.
 Chemistry::Mol->register_format('smiles');
 my $Smiles_parser = __PACKAGE__->new;
 
-=over 4
+=begin comment
+
+=over
 
 =cut
 
@@ -102,8 +104,6 @@ my %type_to_order = (
     '.' => 0,
 );
 
-=begin comment
-
 =item Chemistry::Smiles->new([add_atom => \&sub1, add_bond => \&sub2])
 
 Create a SMILES parser. If the add_atom and add_bond subroutine references
@@ -122,8 +122,6 @@ sub new {
         add_bond => $opts{add_bond} || \&add_bond,
     }, $class;
 }
-
-=begin comment
 
 =item $obj->parse($string, $mol)
 
@@ -211,7 +209,7 @@ sub atom {
 
 =head1 CALLBACK FUNCTIONS
 
-=over 4
+=over
 
 =item $atom = add_atom($mol, $iso, $sym, $chir, $hcount, $chg)
 
@@ -269,6 +267,8 @@ sub end_branch {
     #print "end_branch\n";
     pop @{$self->{stack}};
 }
+
+1;
 
 =head1 BUGS
 

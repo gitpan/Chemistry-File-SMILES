@@ -11,3 +11,4 @@ t/bicyclic.sm
 t/bonds.sm
 t/misc.sm
 t/parse.t
+t/pod.t

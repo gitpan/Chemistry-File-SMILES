@@ -1,6 +1,6 @@
 Revision history for Perl extension Chemistry::File::SMILES
 
-0.2   ?
+0.21  Mon Mar 1 2004
         - Distribution renamed to Chemistry::File::SMILES
         - Use Chemistry::File interface
         - Some changes in the way charges and h-counts are parsed;
