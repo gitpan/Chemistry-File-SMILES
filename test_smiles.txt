@@ -27,3 +27,4 @@ CC.CCC
 CC.[H]
 [H].[H]
 [H].CC
+CC1(C)C2CCC1(C)C(=O)C2

@@ -1,7 +1,7 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.41";
-# $Id: SMILES.pm,v 1.9 2004/06/30 23:29:14 itubert Exp $
+$VERSION = "0.42";
+# $Id: SMILES.pm,v 1.10 2004/08/06 23:23:57 itubert Exp $
 
 use 5.006;
 use strict;
@@ -114,7 +114,7 @@ sub name_is {
 
 sub parse_string {
     my ($self, $string, %opts) = @_;
-    %opts = (kekulize => 1, %opts);
+    %opts = (non_fatal => 1, kekulize => 1, %opts);
     my $mol_class = $opts{mol_class} || "Chemistry::Mol";
 
     # these two are not used yet...
@@ -126,7 +126,10 @@ sub parse_string {
     for my $line (@lines) {
         my ($smiles, $name) = split " ", $line, 2;
         my $mol = $mol_class->new;
-        $Smiles_parser->parse($smiles, $mol);
+        unless ($Smiles_parser->parse($smiles, $mol, \%opts)) {
+            warn "error parsing SMILES line '$line'\n";
+            $mol = $mol_class->new;
+        }
         $mol->name($name);
         add_implicit_hydrogens($mol);
         if ($opts{kekulize}) {
@@ -144,13 +147,13 @@ sub parse_string {
 my $Symbol = qr/
     s|p|o|n|c|b|Zr|Zn|Yb|Y|Xe|W|V|U|Tm|Tl|Ti|Th|
     Te|Tc|Tb|Ta|Sr|Sn|Sm|Si|Sg|Se|Sc|Sb|S|Ru|Rn|Rh|Rf|Re|Rb|Ra|
-    Pu|Pt|Pr|Po|Pm|Pd|Pb|Pa|P|Os|O|Np|No|Ni|Ne|NdNb|Na|N|Mt|Mt|
+    Pu|Pt|Pr|Po|Pm|Pd|Pb|Pa|P|Os|O|Np|No|Ni|Ne|Nd|Nb|Na|N|Mt|Mt|
     Mo|Mn|Mg|Md|Lu|Lr|Li|La|Kr|K|Ir|In|I|Hs|Hs|Ho|Hg|Hf|He|H|Ge|
     Gd|Ga|Fr|Fm|Fe|F|Eu|Es|Er|Dy|Ds|Db|Cu|Cs|Cr|Co|Cm|Cl|Cf|Ce|
-    Cd|Ca|C|Br|Bk|BiBh|Be|Ba|B|Au|At|As|Ar|Am|Al|Ag|Ac|\*
+    Cd|Ca|C|Br|Bk|Bi|Bh|Be|Ba|B|Au|At|As|Ar|Am|Al|Ag|Ac|\*
 /x; # Order is reverse alphabetical to ensure longest match
 
-my $Simple_symbol = qr/Br|Cl|B|C|N|O|P|S|F|I|s|p|o|n|c|b/;
+my $Simple_symbol = qr/Br|Cl|B|C|N|O|P|S|F|I|H|s|p|o|n|c|b/;
 
 my $Bond = qr/(?:[-=#:.\/\\])?/; 
 my $Simple_atom = qr/($Simple_symbol)/;   #3
@@ -227,38 +230,44 @@ sub new {
 #=cut
 
 sub parse {
-    my ($self, $s, $mol) = @_;
+    my ($self, $s, $mol, $opts) = @_;
     $self->{stack} = [ undef ];
     $self->{digits} = {};
 
-    while ($s =~ /$Chain/g) {
-        #my @a = ($1, $2, $3, $4, $5, $6, $7, $8);
-        #print Dumper(\@a);
-        my ($all, $bnd, $sym, $iso, $sym2, $chir, $hcnt, $chg, $dig) 
-            = ($1, $2, $3, $4, $5, $6, $7, $8, $9);
-        if ($all eq '(') {
-            $self->start_branch();
-        } elsif ($all eq ')') {
-            $self->end_branch();
-        } elsif ($sym) { # Simple atom
-            no warnings;
-            my @digs = parse_digits($dig);
-            $self->atom($mol, $bnd, '', $sym, '', undef, '', \@digs);
-        } elsif ($sym2) { # Complex atom
-            no warnings;
-            my @digs = parse_digits($dig);
-            if ($hcnt eq 'H') { 
-                $hcnt = 1;
+    eval {
+        while ($s =~ /$Chain/g) {
+            #my @a = ($1, $2, $3, $4, $5, $6, $7, $8);
+            #print Dumper(\@a);
+            my ($all, $bnd, $sym, $iso, $sym2, $chir, $hcnt, $chg, $dig) 
+                = ($1, $2, $3, $4, $5, $6, $7, $8, $9);
+            if ($all eq '(') {
+                $self->start_branch();
+            } elsif ($all eq ')') {
+                $self->end_branch();
+            } elsif ($sym) { # Simple atom
+                no warnings;
+                my @digs = parse_digits($dig);
+                $self->atom($mol, $bnd, '', $sym, '', undef, '', \@digs);
+            } elsif ($sym2) { # Complex atom
+                no warnings;
+                my @digs = parse_digits($dig);
+                if ($hcnt eq 'H') { 
+                    $hcnt = 1;
+                } else {
+                    $hcnt =~ s/H//;
+                }
+                unless ($chg =~ /\d/) {
+                    $chg = ($chg =~ /-/) ? -length($chg) : length($chg);
+                }
+                $self->atom($mol, $bnd, $iso, $sym2, $chir, $hcnt || 0, $chg, \@digs);
             } else {
-                $hcnt =~ s/H//;
+                die "SMILES ERROR: '$all in $s'\n";
             }
-            unless ($chg =~ /\d/) {
-                $chg = ($chg =~ /-/) ? -length($chg) : length($chg);
-            }
-            $self->atom($mol, $bnd, $iso, $sym2, $chir, $hcnt || 0, $chg, \@digs);
-        } else {
-            croak "SMILES ERROR: '$all'\n";
         }
+    };
+    if ($@) {
+        return undef if $opts->{non_fatal};
+        croak $@;
     }
     $mol;
 }
@@ -364,16 +373,30 @@ sub end_branch {
     pop @{$self->{stack}};
 }
  
+sub calc_implicit_hydrogens {
+    my ($atom) = @_;
+    no warnings 'uninitialized';
+    my $h_count = $ORGANIC_ELEMS{$atom->symbol} - $atom->valence;
+    $h_count = 0 if $h_count < 0;
+    if ($atom->attr("smiles/aromatic") and $atom->symbol =~ /^[CN]$/) {
+        $h_count--;
+    }
+    $h_count;
+}
+
+sub calc_implicit_hydrogens_2 {
+    my ($atom) = @_;
+    my $h_count = $ORGANIC_ELEMS{$atom->symbol} - $atom->valence 
+        + $atom->total_hydrogens;
+    $h_count = 0 if $h_count < 0;
+    $h_count;
+}
 sub add_implicit_hydrogens {
     my ($mol) = @_;
     for my $atom ($mol->atoms) {
         #print "H=".$atom->hydrogens."\n";
         unless (defined $atom->hydrogens) {
-            my $h_count = $ORGANIC_ELEMS{$atom->symbol} - $atom->valence;
-            $h_count = 0 if $h_count < 0;
-            if ($atom->attr("smiles/aromatic") and $atom->symbol =~ /^[CN]$/) {
-                $h_count--;
-            }
+            my $h_count = calc_implicit_hydrogens($atom);
             $atom->hydrogens($h_count);
         }
     }
@@ -400,35 +423,37 @@ sub write_string {
         collapse_hydrogens($mol);
         my @atoms = $mol->atoms; 
 
-        if ($opts{unique}) {
-            unless ($atoms[0]->attr("canon/class")) {
-                require Chemistry::Canonicalize;
-                Chemistry::Canonicalize::canonicalize($mol);
+        if (@atoms) {
+            if ($opts{unique}) {
+                unless ($atoms[0]->attr("canon/class")) {
+                    require Chemistry::Canonicalize;
+                    Chemistry::Canonicalize::canonicalize($mol);
+                }
+                $opts{aromatic} = 1; # all unique smiles have to be aromatic
+                @atoms = sort {
+                    $a->attr("canon/class") <=> $b->attr("canon/class")
+                } @atoms;
             }
-            $opts{aromatic} = 1; # all unique smiles have to be aromatic
-            @atoms = sort {
-                $a->attr("canon/class") <=> $b->attr("canon/class")
-            } @atoms;
+
+            if ($opts{aromatic}) {
+                require Chemistry::Ring;
+                Chemistry::Ring::aromatize_mol($mol);
+            }
+
+            my $visited = {};
+            my @s;
+            for my $atom (@atoms) {
+                next if $visited->{$atom};
+                my $ring_atoms = {};
+
+                # first pass to find and number the ring bonds
+                find_ring_bonds($mol, \%opts, $atom, undef, {}, $ring_atoms);
+
+                # second pass to actually generate the SMILES string
+                push @s, branch($mol, \%opts, $atom, undef, $visited, $ring_atoms);
+            }
+            $smiles .= join '.', @s;
         }
-
-        if ($opts{aromatic}) {
-            require Chemistry::Ring;
-            Chemistry::Ring::aromatize_mol($mol);
-        }
-
-        my $visited = {};
-        my @s;
-        for my $atom (@atoms) {
-            next if $visited->{$atom};
-            my $ring_atoms = {};
-
-            # first pass to find and number the ring bonds
-            find_ring_bonds($mol, \%opts, $atom, undef, {}, $ring_atoms);
-
-            # second pass to actually generate the SMILES string
-            push @s, branch($mol, \%opts, $atom, undef, $visited, $ring_atoms);
-        }
-        $smiles .= join '.', @s;
 
         if ($opts{name}) {
             $smiles .= "\t" . $mol->name;
@@ -462,7 +487,7 @@ sub branch {
     my $prev_branch = "";
     my $smiles;
     $smiles .= bond_symbol($from_bond, $opts);
-    $digits->{count}++;
+    #$digits->{count}++;
     $smiles .= format_atom($atom, $opts);
     if ($digits->{$atom}) {  # opening a ring
         my @d;
@@ -474,18 +499,27 @@ sub branch {
     }
 
     $visited->{$atom}  = 1;
-    for my $bn (sorted_bonds_neighbors($atom, $opts)) {
+    my @bns = sorted_bonds_neighbors($atom, $opts);
+
+    for my $bn (@bns) {
         my $nei  = $bn->{to};
         my $bond = $bn->{bond};
         next if $visited->{$bond};
-        $visited->{$bond} = 1;
         if ($visited->{$nei}) { # closed a ring
             my $digit = shift @{$digits->{$nei}};
             $smiles .= bond_symbol($bond, $opts);
             $smiles .= $digit < 10 ? $digit : "%$digit";
             $digits->{used_digits}[$digit] = 0; # free for future use
             $visited->{$bond} = 1;
-        } else {
+        } 
+    }
+    
+    for my $bn (@bns) {
+        my $nei  = $bn->{to};
+        my $bond = $bn->{bond};
+        next if $visited->{$bond};
+        $visited->{$bond} = 1;
+        unless ($visited->{$nei}) { 
             my $branch = branch($mol, $opts, $nei, $bond, $visited, $digits);
             if ($prev_branch) {
                 $smiles .= "($prev_branch)";
@@ -514,9 +548,9 @@ sub collapse_hydrogens {
     for my $atom (grep {$_->symbol eq 'H'} $mol->atoms) {
         my ($neighbor) = $atom->neighbors or next;
         $atom->delete;
-        my $h_count = $neighbor->attr("smiles/h_count");
+        my $h_count = $neighbor->hydrogens;
         $h_count++;
-        $neighbor->attr("smiles/h_count", $h_count);
+        $neighbor->hydrogens($h_count);
     }
 }
 
@@ -545,8 +579,10 @@ sub bond_symbol {
 sub format_atom {
     my ($atom, $opts) = @_;
     my $s;
-    if ($ORGANIC_ELEMS{$atom->symbol} && !$atom->formal_charge) {
-        $s = $atom->symbol;
+    #no warnings 'uninitialized';
+    if ($ORGANIC_ELEMS{$atom->symbol} && !$atom->formal_charge
+        && $atom->total_hydrogens == calc_implicit_hydrogens_2($atom)) {
+        $s = $atom->symbol; 
         if ($opts->{aromatic} && $atom->aromatic) {
             $s = lc $s;
         }
@@ -575,13 +611,14 @@ specification. Many other tools don't implement this rule either.
 
 =head1 VERSION
 
-0.41
+0.42
 
 =head1 SEE ALSO
 
 L<Chemistry::Mol>, L<Chemistry::File>
 
 The SMILES Home Page at http://www.daylight.com/dayhtml/smiles/
+
 The Daylight Theory Manual at 
 http://www.daylight.com/dayhtml/doc/theory/theory.smiles.html
 
@@ -589,12 +626,12 @@ The PerlMol website L<http://www.perlmol.org/>
 
 =head1 AUTHOR
 
-Ivan Tubert E<lt>itub@cpan.orgE<gt>
+Ivan Tubert-Brohman E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 Ivan Tubert. All rights reserved. This program is free
-software; you can redistribute it and/or modify it under the same terms as
+Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is
+free software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 
 =cut

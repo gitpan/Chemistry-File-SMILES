@@ -1,4 +1,4 @@
-Chemistry/File::SMILES version 0.41
+Chemistry/File::SMILES version 0.42
 ===================================
 
 This object-oriented module parses and produces SMILES (Simplified Molecular
@@ -8,8 +8,11 @@ Toolkit (http://www.perlmol.org/).
 For more information about SMILES, see The SMILES Home Page at
 http://www.daylight.com/dayhtml/smiles/
 
-CHANGES SINCE VERSION 0.40
-        - Fixed bug for writing SMILES that contain disconnected hydrogen atoms.
+CHANGES SINCE VERSION 0.41
+        - Fixed bug report about element symbols and empty strings (thanks to
+          kila_gani at yahoo.co.jp for noticing this).
+        - Fixed bug where ring closure digits appeared after branches on output.
+        - Fixed bug where non-standard hydrogen count was lost on output.
 
 INSTALLATION
 
@@ -29,7 +32,7 @@ DEPENDENCIES
 
 COPYRIGHT AND LICENSE
 
-Copyright (C) 2004 Ivan Tubert
+Copyright (C) 2004 Ivan Tubert-Brohman <itub@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 
