@@ -1,7 +1,9 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.21";
-use 5.006001;
+$VERSION = "0.30";
+# $Id: SMILES.pm,v 1.4 2004/05/17 23:29:20 itubert Exp $
+
+use 5.006;
 use strict;
 use warnings;
 use base "Chemistry::File";
@@ -18,13 +20,19 @@ Chemistry::File::SMILES - SMILES parser
     #!/usr/bin/perl
     use Chemistry::File::SMILES;
 
+    # parse a SMILES string
     my $s = 'C1CC1(=O)[O-]';
     my $mol = Chemistry::Mol->parse($s, format => 'smiles');
 
+    # print a SMILES string
+    print $mol->print(format => 'smiles');
+
+
 =head1 DESCRIPTION
 
-This module parses a SMILES (Simplified Molecular Input Line
-Entry Specification) string. It registers the 'smiles' format with 
+This module parses a SMILES (Simplified Molecular Input Line Entry
+Specification) string. This is a File I/O driver for the PerlMol project.
+L<http://www.perlmol.org/>. It registers the 'smiles' format with
 Chemistry::Mol.
 
 =cut
@@ -33,11 +41,11 @@ Chemistry::Mol.
 Chemistry::Mol->register_format('smiles');
 my $Smiles_parser = __PACKAGE__->new;
 
-=begin comment
-
-=over
-
-=cut
+#=begin comment
+#
+#=over
+#
+#=cut
 
 
 sub parse_string {
@@ -104,14 +112,14 @@ my %type_to_order = (
     '.' => 0,
 );
 
-=item Chemistry::Smiles->new([add_atom => \&sub1, add_bond => \&sub2])
-
-Create a SMILES parser. If the add_atom and add_bond subroutine references
-are given, they will be called whenever an atom or a bond needs to be added
-to the molecule. If they are not specified, default methods, which
-create a Chemistry::Mol object, will be used.
-
-=cut
+#=item Chemistry::Smiles->new([add_atom => \&sub1, add_bond => \&sub2])
+#
+#Create a SMILES parser. If the add_atom and add_bond subroutine references
+#are given, they will be called whenever an atom or a bond needs to be added
+#to the molecule. If they are not specified, default methods, which
+#create a Chemistry::Mol object, will be used.
+#
+#=cut
 
 sub new {
     my $class = shift;
@@ -123,15 +131,15 @@ sub new {
     }, $class;
 }
 
-=item $obj->parse($string, $mol)
-
-Parse a Smiles $string. $mol is a "molecule state object". It can be anything;
-the parser doesn't do anything with it except sending it as the first parameter
-to the callback functions. If callback functions were not provided when
-constructing the parser object, $mol must be a Chemistry::Mol object, because
-that's what the default callback functions require.
-
-=cut
+#=item $obj->parse($string, $mol)
+#
+#Parse a Smiles $string. $mol is a "molecule state object". It can be anything;
+#the parser doesn't do anything with it except sending it as the first parameter
+#to the callback functions. If callback functions were not provided when
+#constructing the parser object, $mol must be a Chemistry::Mol object, because
+#that's what the default callback functions require.
+#
+#=cut
 
 sub parse {
     my $self = shift;
@@ -205,23 +213,23 @@ sub atom {
     $self->{stack}[-1] = $a;
 }
 
-=back
-
-=head1 CALLBACK FUNCTIONS
-
-=over
-
-=item $atom = add_atom($mol, $iso, $sym, $chir, $hcount, $chg)
-
-Called by the parser whenever an atom is found. The first parameter is the
-state object given to $obj->parse(). The other parameters are the isotope,
-symbol, chirality, hydrogen count, and charge of the atom. Only the symbol is
-guaranteed to be defined. Mnemonic: the parameters are given in the same order
-that is used in a SMILES string (such as [18OH-]). This callback is expected to
-return something that uniquely identifies the atom that was created (it might
-be a number, a string, or an object).
-
-=cut
+#=back
+#
+#=head1 CALLBACK FUNCTIONS
+#
+#=over
+#
+#=item $atom = add_atom($mol, $iso, $sym, $chir, $hcount, $chg)
+#
+#Called by the parser whenever an atom is found. The first parameter is the
+#state object given to $obj->parse(). The other parameters are the isotope,
+#symbol, chirality, hydrogen count, and charge of the atom. Only the symbol is
+#guaranteed to be defined. Mnemonic: the parameters are given in the same order
+#that is used in a SMILES string (such as [18OH-]). This callback is expected to
+#return something that uniquely identifies the atom that was created (it might
+#be a number, a string, or an object).
+#
+#=cut
 
 # Default add_atom callback 
 sub add_atom {
@@ -234,18 +242,18 @@ sub add_atom {
     $atom;
 }
 
-=item add_bond($mol, $type, $a1, $a2)
-
-Called by the parser whenever an bond needs to be created. The first parameter
-is the state object given to $obj->parse(). The other parameters are the bond
-type and the two atoms that need to be bonded. The atoms are identified using
-the return values from the add_atom() callback.
-
-=back
-
-=end comment
-
-=cut
+#=item add_bond($mol, $type, $a1, $a2)
+#
+#Called by the parser whenever an bond needs to be created. The first parameter
+#is the state object given to $obj->parse(). The other parameters are the bond
+#type and the two atoms that need to be bonded. The atoms are identified using
+#the return values from the add_atom() callback.
+#
+#=back
+#
+#=end comment
+#
+#=cut
 
 # Default add_bond callback 
 sub add_bond {
@@ -268,13 +276,132 @@ sub end_branch {
     pop @{$self->{stack}};
 }
 
+##### SMILES WRITER ########
+
+my %ORDER_TO_TYPE = (
+    2 => '=', 1 => '', 3 => '#',
+);
+
+my %ORGANIC_ELEMS = (
+    Br => 1, Cl => 1, B => 1, C => 1, N => 1, O => 1, P => 1, S => 1, 
+    F => 1, I => 1, s => 1, p => 1, o => 1, n => 1, c => 1, b => 1,
+);
+
+sub write_string {
+    my ($self, $mol, %opts) = @_;
+
+    $mol = $mol->clone; 
+    collapse_hydrogens($mol);
+
+    my $atom = $mol->atoms(1);
+    my $ring_atoms = {};
+    find_ring_bonds($mol, $atom, undef, {}, $ring_atoms);
+    my $smiles = branch($mol, $atom, undef, {}, $ring_atoms);
+}
+
+sub find_ring_bonds {
+    my ($mol, $atom, $from_bond, $visited, $ring_atoms) = @_;
+
+    $visited->{$atom}  = 1;
+    for my $bn ($atom->bonds_neighbors) {
+        my $nei  = $bn->{to};
+        my $bond = $bn->{bond};
+        next if $visited->{$bond};
+        $visited->{$bond}  = 1;
+        if ($visited->{$nei}) { # closed ring
+            #print "closing ring\n";
+            $ring_atoms->{$nei}++;
+        } else {
+            find_ring_bonds($mol, $nei, $bond, $visited, $ring_atoms);
+        }
+    }
+}
+
+sub branch {
+    my ($mol, $atom, $from_bond, $visited, $digits) = @_;
+
+    my $prev_branch = "";
+    my $smiles;
+    $smiles .= $ORDER_TO_TYPE{$from_bond->order} if $from_bond;
+    $digits->{count}++;
+    if ($ORGANIC_ELEMS{$atom->symbol}) {
+        $smiles .= $atom->symbol;
+    } else {
+        my $h_count = $atom->attr("smiles/h_count");
+        $h_count = $h_count ? ($h_count > 1 ? "H$h_count" : 'H') : '';
+        $smiles .= "[" . $atom->symbol . "$h_count]";
+    }
+    if ($digits->{$atom}) {  # opening a ring
+        my @d;
+        for (1 .. $digits->{$atom}) {
+            push @d, next_digit($digits);
+        }
+        $digits->{$atom} = \@d;
+        $smiles .= join "", map { $_ < 10 ? $_ : "%$_"} @d;
+    }
+
+    $visited->{$atom}  = 1;
+    for my $bn ($atom->bonds_neighbors) {
+        my $nei  = $bn->{to};
+        my $bond = $bn->{bond};
+        next if $visited->{$bond};
+        $visited->{$bond} = 1;
+        if ($visited->{$nei}) { # closed a ring
+            my $digit = shift @{$digits->{$nei}};
+            $smiles .= $ORDER_TO_TYPE{$bond->order};
+            $smiles .= $digit < 10 ? $digit : "%$digit";
+            $digits->{used_digits}[$digit] = 0; # free for future use
+            $visited->{$bond} = 1;
+        } else {
+            my $branch = branch($mol, $nei, $bond, $visited, $digits);
+            if ($prev_branch) {
+                $smiles .= "($prev_branch)";
+            }
+            $prev_branch = $branch;
+        }
+    }
+    $smiles .= "$prev_branch";
+    $smiles;
+}
+
+sub next_digit {
+    my ($digits) = @_;
+    for (my $i = 1; $i < 100; $i++) {
+        unless ($digits->{used_digits}[$i]) {
+            $digits->{used_digits}[$i] = 1;  # mark as used
+            return $i;
+        }
+    }
+    die "no more available smiles digits!";  # shouldn't happen
+}
+
+sub collapse_hydrogens {
+    my ($mol) = @_;
+
+    for my $atom (grep {$_->symbol eq 'H'} $mol->atoms) {
+        my ($neighbor) = $atom->neighbors;
+        $atom->delete;
+        my $h_count = $neighbor->attr("smiles/h_count");
+        $h_count++;
+        $neighbor->attr("smiles/h_count", $h_count);
+    }
+}
+
+
 1;
 
-=head1 BUGS
+=head1 CAVEATS
 
-The SMILES specification is not fully implemented yet. For example, branches
-that start before an atom (such as (OC)C, which should be equivalent to C(CO)
-and COC).
+Branches that start before an atom, such as (OC)C, which should be equivalent
+to C(CO) and COC, according to some variants of the SMILES specification. Many
+other tools don't implement this rule either.
+
+Not yet available: Proper handling of aromatic atoms;  unique (canonical)
+SMILES output.
+
+=head1 VERSION
+
+0.30
 
 =head1 SEE ALSO
 
@@ -283,6 +410,8 @@ L<Chemistry::Mol>, L<Chemistry::File>
 The SMILES Home Page at http://www.daylight.com/dayhtml/smiles/
 The Daylight Theory Manual at 
 http://www.daylight.com/dayhtml/doc/theory/theory.smiles.html
+
+The PerlMol website L<http://www.perlmol.org/>
 
 =head1 AUTHOR
 

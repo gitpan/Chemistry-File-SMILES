@@ -1,5 +1,9 @@
 Revision history for Perl extension Chemistry::File::SMILES
 
+0.30  Mon May 17 2004
+        - Added write_string (smiles output). Aromatic atoms and disconnected
+          structures are still not properly implemented.
+
 0.21  Mon Mar 1 2004
         - Distribution renamed to Chemistry::File::SMILES
         - Use Chemistry::File interface

@@ -31,7 +31,6 @@ my $parser = Chemistry::File::SMILES->new(
 for $fname (@files) {
     open F, $fname or die;
     my $content;
-    my $c = {i=>0, out=>"$s\n"};
     { local undef $/; $content = <F>; }
     my ($s) = $content =~ /(.*)$/m;
     my $c = {i=>1, out=>"$s\n"};

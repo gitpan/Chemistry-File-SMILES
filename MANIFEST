@@ -3,6 +3,7 @@ MANIFEST			This list of files
 Makefile.PL
 README
 SMILES.pm
+TODO
 t/D-Ala.sm
 t/L-Ala.sm
 t/bicyclic%%.sm
@@ -12,3 +13,6 @@ t/bonds.sm
 t/misc.sm
 t/parse.t
 t/pod.t
+t/write.t
+test_smiles.txt
+write.pl
