@@ -1,5 +1,5 @@
-Chemistry/File::SMILES version 0.43
-===================================
+Chemistry::File::SMILES version 0.44
+====================================
 
 This object-oriented module parses and produces SMILES (Simplified Molecular
 Input Line Entry Specification) strings. It is a File I/O driver for the PerMol
@@ -8,12 +8,9 @@ Toolkit (http://www.perlmol.org/).
 For more information about SMILES, see The SMILES Home Page at
 http://www.daylight.com/dayhtml/smiles/
 
-CHANGES SINCE VERSION 0.42
-        - Fixed incompatibilities with the Chemistry::File 0.30 interface;
-          renamed the ancient 'new' method to 'new_parser'.
-        - Refactored the writing code to make it more object-oriented.
-        - Added the 'number' option for output.
-        - Read atom names.
+CHANGES SINCE VERSION 0.43
+    - Fixed memory leak that prevented the last atom from being garbage
+      collected.
 
 INSTALLATION
 
@@ -33,7 +30,7 @@ DEPENDENCIES
 
 COPYRIGHT AND LICENSE
 
-Copyright (C) 2004 Ivan Tubert-Brohman <itub@cpan.org>
+Copyright (C) 2005 Ivan Tubert-Brohman <itub@cpan.org>
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself. 

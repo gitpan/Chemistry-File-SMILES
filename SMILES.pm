@@ -1,7 +1,7 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.43";
-# $Id: SMILES.pm,v 1.12 2004/11/04 01:47:24 itubert Exp $
+$VERSION = "0.44";
+# $Id: SMILES.pm,v 1.14 2005/03/29 23:48:34 itubert Exp $
 
 use 5.006;
 use strict;
@@ -245,7 +245,6 @@ my %ORGANIC_ELEMS = (
 sub new_parser {
     my $class = shift;
     my %opts = @_;
-    require Chemistry::Mol unless $opts{add_atom} && $opts{add_bond};
     my $self = bless {
         add_atom => $opts{add_atom} || \&add_atom,
         add_bond => $opts{add_bond} || \&add_bond,
@@ -299,6 +298,8 @@ sub parse {
             }
         }
     };
+    # clean up to avoid memory leak
+    $self->{stack} = undef;
     if ($@) {
         croak $@ if $opts->{fatal};
         return;
@@ -656,7 +657,7 @@ with explicitly low hydrogen counts.
 
 =head1 VERSION
 
-0.43
+0.44
 
 =head1 SEE ALSO
 
@@ -675,7 +676,7 @@ Ivan Tubert-Brohman E<lt>itub@cpan.orgE<gt>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2004 Ivan Tubert-Brohman. All rights reserved. This program is
+Copyright (c) 2005 Ivan Tubert-Brohman. All rights reserved. This program is
 free software; you can redistribute it and/or modify it under the same terms as
 Perl itself.
 
