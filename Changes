@@ -1,0 +1,15 @@
+Revision history for Perl extension Chemistry::File::SMILES
+
+0.2   ?
+        - Distribution renamed to Chemistry::File::SMILES
+        - Use Chemistry::File interface
+        - Some changes in the way charges and h-counts are parsed;
+          (e.g., now -- is converted to -1, H is converted to 1).
+
+0.11  Mon Nov 3 2003
+        - Now the default atom and bond handlers call new_atom and new_bond
+            instead of creating the atom and bond themselves.
+        - Fixed a POD error.
+
+0.10  Fri Sep 6 2003
+	- first release as Chemistry::Smiles

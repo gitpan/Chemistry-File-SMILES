@@ -1,0 +1,35 @@
+Chemistry/File::SMILES version 0.20
+===================================
+
+This object-oriented module parses a SMILES (Simplified Molecular Input Line
+Entry Specification) string. 
+
+For more information about SMILES, see The SMILES Home Page at
+http://www.daylight.com/dayhtml/smiles/
+
+This module is under development and doesn't implement the full SMILES syntax
+yet.
+
+Missing features:
+* Branches that start before an atom (such as (OC)C, which should be 
+  equivalent to C(CO) and COC).
+
+INSTALLATION
+
+To install this module type the following:
+
+   perl Makefile.PL
+   make
+   make test
+   make install
+
+DEPENDENCIES
+    - Chemistry::Mol
+
+COPYRIGHT AND LICENCE
+
+Copyright (C) 2004 Ivan Tubert
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself. 
+
