@@ -1,20 +1,15 @@
-Chemistry/File::SMILES version 0.40
+Chemistry/File::SMILES version 0.41
 ===================================
 
 This object-oriented module parses and produces SMILES (Simplified Molecular
 Input Line Entry Specification) strings. It is a File I/O driver for the PerMol
-Toolkit. 
+Toolkit (http://www.perlmol.org/).
 
 For more information about SMILES, see The SMILES Home Page at
 http://www.daylight.com/dayhtml/smiles/
 
-Missing features:
-* Branches that start before an atom, such as (OC)C, which should be 
-  equivalent to C(CO) and COC, according to some variants of the SMILES 
-  specification. Many other tools don't implement this rule either.
-
-CHANGES SINCE VERSION 0.33
-        - Added canonicalization (unique SMILES) and aromaticity support.
+CHANGES SINCE VERSION 0.40
+        - Fixed bug for writing SMILES that contain disconnected hydrogen atoms.
 
 INSTALLATION
 

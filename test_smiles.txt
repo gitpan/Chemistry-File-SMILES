@@ -23,3 +23,7 @@ CCCCN(F)N(=O)=O
 CC(=O)c1occc1
 C=COC=C
 FC(F)(Br)CBr
+CC.CCC
+CC.[H]
+[H].[H]
+[H].CC

@@ -8,7 +8,7 @@ WriteMakefile(
         Chemistry::Mol              0.24
         Chemistry::Canonicalize     0.10
         Chemistry::Bond::Find       0.21
-        Chemistry::Ring::Find       0.10
+        Chemistry::Ring             0.15
         List::Util                  0
     )},
 );

@@ -1,7 +1,7 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.40";
-# $Id: SMILES.pm,v 1.8 2004/06/16 19:43:04 itubert Exp $
+$VERSION = "0.41";
+# $Id: SMILES.pm,v 1.9 2004/06/30 23:29:14 itubert Exp $
 
 use 5.006;
 use strict;
@@ -28,6 +28,9 @@ Chemistry::File::SMILES - SMILES linear notation parser/writer
 
     # print a SMILES string
     print $mol->print(format => 'smiles');
+
+    # print a unique (canonical) SMILES string
+    print $mol->print(format => 'smiles', unique => 1);
 
     # parse a SMILES file
     my @mols = Chemistry::Mol->read("file.smi", format => 'smiles');
@@ -77,6 +80,13 @@ module, and represent the organic aromatic atoms with lowercase symbols.
 
 When used on output, canonicalize the structure if it hasn't been canonicalized
 already and generate a unique SMILES string. This option implies "aromatic".
+
+=item kekulize
+
+When used on input, assign single or double bond orders to "aromatic" or
+otherwise unspecified bonds (i.e., generate the Kekule structure). If false,
+the bond orders will remain single. This option is true by default. This uses
+C<assign_bond_orders> from the L<Chemistry::Bond::Find> module.
 
 =back
 
@@ -401,7 +411,10 @@ sub write_string {
             } @atoms;
         }
 
-        aromatize($mol) if $opts{aromatic};
+        if ($opts{aromatic}) {
+            require Chemistry::Ring;
+            Chemistry::Ring::aromatize_mol($mol);
+        }
 
         my $visited = {};
         my @s;
@@ -499,29 +512,11 @@ sub collapse_hydrogens {
     my ($mol) = @_;
 
     for my $atom (grep {$_->symbol eq 'H'} $mol->atoms) {
-        my ($neighbor) = $atom->neighbors;
+        my ($neighbor) = $atom->neighbors or next;
         $atom->delete;
         my $h_count = $neighbor->attr("smiles/h_count");
         $h_count++;
         $neighbor->attr("smiles/h_count", $h_count);
-    }
-}
-
-sub aromatize {
-    my ($mol) = @_;
-
-    require Chemistry::Ring::Find;
-
-    for my $atom ($mol->atoms) {
-        my @rings = Chemistry::Ring::Find::find_ring(
-            $atom, all => 1, min => 5, max => 7);
-        for my $ring (@rings) {
-            if ($ring->is_aromatic) {
-                for my $ring_elem ($ring->atoms, $ring->bonds) {
-                    $ring_elem->aromatic(1);
-                }
-            }
-        }
     }
 }
 
@@ -580,7 +575,7 @@ specification. Many other tools don't implement this rule either.
 
 =head1 VERSION
 
-0.40
+0.41
 
 =head1 SEE ALSO
 
