@@ -1,8 +1,9 @@
-Chemistry/File::SMILES version 0.31
+Chemistry/File::SMILES version 0.32
 ===================================
 
-This object-oriented module parses a SMILES (Simplified Molecular Input Line
-Entry Specification) string. It is a File I/O driver for the PerMol Toolkit. 
+This object-oriented module parses and produces SMILES (Simplified Molecular
+Input Line Entry Specification) strings. It is a File I/O driver for the PerMol
+Toolkit. 
 
 For more information about SMILES, see The SMILES Home Page at
 http://www.daylight.com/dayhtml/smiles/
@@ -17,10 +18,10 @@ Missing features:
 * Proper handling of aromatic atoms.
 * Unique (canonical) SMILES output.
 
-CHANGES SINCE VERSION 0.21
-        - Added write_string (smiles output). Aromatic atoms and disconnected
-          structures are still not properly implemented.
-        - Added support for a name after the SMILES string.
+CHANGES SINCE VERSION 0.31
+        - Changed the way disconnected structures are handled. Now "bonds" of 
+          type . (dot) don't produce any bond in the molecule object (previous
+          versions added a bond with order=0).
 
 INSTALLATION
 
