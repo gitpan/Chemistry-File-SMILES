@@ -1,7 +1,7 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.32";
-# $Id: SMILES.pm,v 1.6 2004/05/31 23:09:36 itubert Exp $
+$VERSION = "0.33";
+# $Id: SMILES.pm,v 1.7 2004/06/11 00:10:45 itubert Exp $
 
 use 5.006;
 use strict;
@@ -27,6 +27,12 @@ Chemistry::File::SMILES - SMILES linear notation parser/writer
     # print a SMILES string
     print $mol->print(format => 'smiles');
 
+    # parse a SMILES file
+    my @mols = Chemistry::Mol->read("file.smi", format => 'smiles');
+
+    # write a multiline SMILES file
+    Chemistry::Mol->write("file.smi", mols => [@mols]);
+
 
 =head1 DESCRIPTION
 
@@ -47,6 +53,15 @@ tab.
 
     print $mol->print(format => 'smiles', name => 1);
 
+=head2 Multiline SMILES and SMILES files
+
+A file or string can contain multiple molecules, one per line.
+
+    CCl	 Methyl chloride
+    CO	 Methanol
+
+Files with the extension '.smi' are assumed to have this format.
+
 =cut
 
 # INITIALIZATION
@@ -59,6 +74,15 @@ my $Smiles_parser = __PACKAGE__->new;
 #
 #=cut
 
+sub file_is {
+    my $self = shift;
+    $self->name_is(@_);
+}
+
+sub name_is {
+    my ($self, $name) = @_;
+    $name =~ /\.smi/;
+}
 
 sub parse_string {
     my ($self, $string, %opts) = @_;
@@ -66,11 +90,11 @@ sub parse_string {
     my $atom_class = $opts{atom_class} || "Chemistry::Atom";
     my $bond_class = $opts{bond_class} || "Chemistry::Bond";
 
-    my $mol = $mol_class->new;
     my (@lines) = split /(?:\n|\r\n?)/, $string;
     my @mols;
     for my $line (@lines) {
-        my ($smiles, $name) = split " ", $string, 2;
+        my ($smiles, $name) = split " ", $line, 2;
+        my $mol = $mol_class->new;
         $Smiles_parser->parse($smiles, $mol);
         $mol->name($name);
         return $mol unless wantarray;
@@ -308,17 +332,31 @@ my %ORGANIC_ELEMS = (
 );
 
 sub write_string {
-    my ($self, $mol, %opts) = @_;
+    my ($self, $mol_ref, %opts) = @_;
 
-    $mol = $mol->clone; 
-    collapse_hydrogens($mol);
+    my $eol;
+    my @mols;
+    if ($opts{mols}) {
+        @mols = @{$opts{mols}};
+        $eol = "\n";
+    } else {
+        @mols = $mol_ref; 
+        $eol = "";
+    }
 
-    my $atom = $mol->atoms(1);
-    my $ring_atoms = {};
-    find_ring_bonds($mol, $atom, undef, {}, $ring_atoms);
-    my $smiles = branch($mol, $atom, undef, {}, $ring_atoms);
-    if ($opts{name}) {
-        $smiles .= $opts{name} . $mol->name;
+    my $smiles;
+    for my $mol (@mols) {
+        $mol = $mol->clone; 
+        collapse_hydrogens($mol);
+
+        my $atom = $mol->atoms(1);
+        my $ring_atoms = {};
+        find_ring_bonds($mol, $atom, undef, {}, $ring_atoms);
+        $smiles .= branch($mol, $atom, undef, {}, $ring_atoms);
+        if ($opts{name}) {
+            $smiles .= "\t" . $mol->name;
+        }
+        $smiles .= $eol;
     }
     return $smiles;
 }
@@ -425,7 +463,7 @@ SMILES output.
 
 =head1 VERSION
 
-0.32
+0.33
 
 =head1 SEE ALSO
 

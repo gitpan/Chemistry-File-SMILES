@@ -5,6 +5,6 @@ WriteMakefile(
     'NAME'		=> 'Chemistry::File::SMILES',
     'VERSION_FROM'	=> 'SMILES.pm', # finds $VERSION
     'PREREQ_PM'		=> {
-        'Chemistry::Mol' => "0.22",
+        'Chemistry::Mol' => "0.23",
     },
 );

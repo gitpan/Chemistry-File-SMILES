@@ -1,4 +1,4 @@
-Chemistry/File::SMILES version 0.32
+Chemistry/File::SMILES version 0.33
 ===================================
 
 This object-oriented module parses and produces SMILES (Simplified Molecular
@@ -18,10 +18,8 @@ Missing features:
 * Proper handling of aromatic atoms.
 * Unique (canonical) SMILES output.
 
-CHANGES SINCE VERSION 0.31
-        - Changed the way disconnected structures are handled. Now "bonds" of 
-          type . (dot) don't produce any bond in the molecule object (previous
-          versions added a bond with order=0).
+CHANGES SINCE VERSION 0.32
+        - Added multiline support.
 
 INSTALLATION
 

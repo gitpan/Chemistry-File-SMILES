@@ -1,5 +1,8 @@
 Revision history for Perl extension Chemistry::File::SMILES
 
+0.33  Thu Jun 10 2004
+        - Added multiline support.
+
 0.32  Mon May 31 2004
         - Changed the way disconnected structures are handled. Now "bonds" of 
           type . (dot) don't produce any bond in the molecule object (previous
