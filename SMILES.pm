@@ -1,7 +1,7 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.30";
-# $Id: SMILES.pm,v 1.4 2004/05/17 23:29:20 itubert Exp $
+$VERSION = "0.31";
+# $Id: SMILES.pm,v 1.5 2004/05/18 14:35:04 itubert Exp $
 
 use 5.006;
 use strict;
@@ -13,7 +13,7 @@ use Carp;
 
 =head1 NAME
 
-Chemistry::File::SMILES - SMILES parser
+Chemistry::File::SMILES - SMILES linear notation parser/writer
 
 =head1 SYNOPSYS
 
@@ -35,6 +35,18 @@ Specification) string. This is a File I/O driver for the PerlMol project.
 L<http://www.perlmol.org/>. It registers the 'smiles' format with
 Chemistry::Mol.
 
+This parser interprets anything after whitespace as the molecule's name;
+for example, when the following SMILES string is parsed, $mol->name will be
+set to "Methyl chloride":
+
+    CCl	 Methyl chloride
+
+The name is not included by default on output. However, if the C<name> option
+is defined, the name will be included after the SMILES string, separated by a
+tab.
+
+    print $mol->print(format => 'smiles', name => 1);
+
 =cut
 
 # INITIALIZATION
@@ -55,8 +67,16 @@ sub parse_string {
     my $bond_class = $opts{bond_class} || "Chemistry::Bond";
 
     my $mol = $mol_class->new;
-    $Smiles_parser->parse($string, $mol);
-    return $mol;
+    my (@lines) = split /(?:\n|\r\n?)/, $string;
+    my @mols;
+    for my $line (@lines) {
+        my ($smiles, $name) = split " ", $string, 2;
+        $Smiles_parser->parse($smiles, $mol);
+        $mol->name($name);
+        return $mol unless wantarray;
+        push @mols, $mol;
+    }
+    return @mols;
 }
 
 ### The contents of the original Chemistry::Smiles module start below
@@ -297,6 +317,10 @@ sub write_string {
     my $ring_atoms = {};
     find_ring_bonds($mol, $atom, undef, {}, $ring_atoms);
     my $smiles = branch($mol, $atom, undef, {}, $ring_atoms);
+    if ($opts{name}) {
+        $smiles .= $opts{name} . $mol->name;
+    }
+    return $smiles;
 }
 
 sub find_ring_bonds {
@@ -401,7 +425,7 @@ SMILES output.
 
 =head1 VERSION
 
-0.30
+0.31
 
 =head1 SEE ALSO
 

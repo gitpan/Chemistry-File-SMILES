@@ -1,4 +1,4 @@
-Chemistry/File::SMILES version 0.30
+Chemistry/File::SMILES version 0.31
 ===================================
 
 This object-oriented module parses a SMILES (Simplified Molecular Input Line
@@ -20,6 +20,7 @@ Missing features:
 CHANGES SINCE VERSION 0.21
         - Added write_string (smiles output). Aromatic atoms and disconnected
           structures are still not properly implemented.
+        - Added support for a name after the SMILES string.
 
 INSTALLATION
 

@@ -1,5 +1,9 @@
 Revision history for Perl extension Chemistry::File::SMILES
 
+0.31  Tue May 18 2004
+        - Added missing dependency on Chemistry-Mol-0.22 to Makefile.PL
+        - Added support for a name after the SMILES string.
+
 0.30  Mon May 17 2004
         - Added write_string (smiles output). Aromatic atoms and disconnected
           structures are still not properly implemented.
