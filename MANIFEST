@@ -10,9 +10,11 @@ t/bicyclic%%.sm
 t/bicyclic%.sm
 t/bicyclic.sm
 t/bonds.sm
+t/exception.t
 t/misc.sm
 t/multiline.t
 t/names.t
+t/options.t
 t/parse.t
 t/pod.t
 t/unique.t
@@ -21,3 +23,4 @@ test_names.txt
 test_smiles.txt
 unique_smiles.txt
 write.pl
+META.yml                                 Module meta-data (added by MakeMaker)

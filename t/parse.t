@@ -1,23 +1,19 @@
-# Before `make install' is performed this script should be runnable with
-# `make test'. After `make install' it should work as `perl 1.t'
-
-#########################
-
-# change 'tests => 1' to 'tests => last_test_to_print';
-
 use Test;
+
 our @files;
 BEGIN {
     @files = glob "t/*.sm";
     plan tests => 1 + @files; 
 };
+
 use Chemistry::File::SMILES;
 ok(1); # If we made it this far, we're ok.
 
 no warnings 'uninitialized';
-my $parser = Chemistry::File::SMILES->new(
+my $parser = Chemistry::File::SMILES->new_parser(
     add_atom => sub {
         my $c=shift; 
+        pop; # to get rid of the new name property (this is a very old test)
         local $"=',';
         $c->{out} .= "ATOM$c->{i}(@_)\n"; 
         $c->{i}++;
