@@ -1,5 +1,8 @@
 Revision history for Perl extension Chemistry::File::SMILES
 
+0.40  Wed Jun 16 2004
+        - Added canonicalization (unique SMILES) and aromaticity support.
+
 0.33  Thu Jun 10 2004
         - Added multiline support.
 

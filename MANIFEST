@@ -15,7 +15,9 @@ t/multiline.t
 t/names.t
 t/parse.t
 t/pod.t
+t/unique.t
 t/write.t
 test_names.txt
 test_smiles.txt
+unique_smiles.txt
 write.pl

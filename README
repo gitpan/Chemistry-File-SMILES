@@ -1,4 +1,4 @@
-Chemistry/File::SMILES version 0.33
+Chemistry/File::SMILES version 0.40
 ===================================
 
 This object-oriented module parses and produces SMILES (Simplified Molecular
@@ -8,18 +8,13 @@ Toolkit.
 For more information about SMILES, see The SMILES Home Page at
 http://www.daylight.com/dayhtml/smiles/
 
-This module is under development and doesn't implement the full SMILES syntax
-yet.
-
 Missing features:
 * Branches that start before an atom, such as (OC)C, which should be 
   equivalent to C(CO) and COC, according to some variants of the SMILES 
   specification. Many other tools don't implement this rule either.
-* Proper handling of aromatic atoms.
-* Unique (canonical) SMILES output.
 
-CHANGES SINCE VERSION 0.32
-        - Added multiline support.
+CHANGES SINCE VERSION 0.33
+        - Added canonicalization (unique SMILES) and aromaticity support.
 
 INSTALLATION
 
@@ -31,9 +26,13 @@ To install this module type the following:
    make install
 
 DEPENDENCIES
-    - Chemistry::Mol
+        Chemistry::Mol              0.24
+        Chemistry::Canonicalize     0.10
+        Chemistry::Bond::Find       0.21
+        Chemistry::Ring::Find       0.10
+        List::Util                  0
 
-COPYRIGHT AND LICENCE
+COPYRIGHT AND LICENSE
 
 Copyright (C) 2004 Ivan Tubert
 

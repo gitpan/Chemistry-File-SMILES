@@ -11,8 +11,8 @@ plan tests => @smiles * 2;
 for my $smiles (@smiles) {
     chomp $smiles;
     my $mol = Chemistry::Mol->parse($smiles, format => 'smiles');
-    my $out = $mol->print(format => 'smiles') . "\t" . $mol->name;
+    my $out = $mol->print(format => 'smiles', aromatic => 1) . "\t" . $mol->name;
     is($out, $smiles, "$smiles (name => 0)");
-    $out = $mol->print(format => 'smiles', name => "\t");
+    $out = $mol->print(format => 'smiles', name => 1, aromatic => 1);
     is($out, $smiles, "$smiles (name => 1)");
 }

@@ -1,13 +1,15 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.33";
-# $Id: SMILES.pm,v 1.7 2004/06/11 00:10:45 itubert Exp $
+$VERSION = "0.40";
+# $Id: SMILES.pm,v 1.8 2004/06/16 19:43:04 itubert Exp $
 
 use 5.006;
 use strict;
 use warnings;
 use base "Chemistry::File";
 use Chemistry::Mol;
+use Chemistry::Bond::Find 'assign_bond_orders';
+use List::Util 'first';
 use Carp;
 
 
@@ -62,6 +64,22 @@ A file or string can contain multiple molecules, one per line.
 
 Files with the extension '.smi' are assumed to have this format.
 
+=head1 OPTIONS
+
+=over
+
+=item aromatic
+
+On output, detect aromatic atoms and bonds by means of the Chemistry::Ring
+module, and represent the organic aromatic atoms with lowercase symbols.
+
+=item unique
+
+When used on output, canonicalize the structure if it hasn't been canonicalized
+already and generate a unique SMILES string. This option implies "aromatic".
+
+=back
+
 =cut
 
 # INITIALIZATION
@@ -86,9 +104,12 @@ sub name_is {
 
 sub parse_string {
     my ($self, $string, %opts) = @_;
+    %opts = (kekulize => 1, %opts);
     my $mol_class = $opts{mol_class} || "Chemistry::Mol";
-    my $atom_class = $opts{atom_class} || "Chemistry::Atom";
-    my $bond_class = $opts{bond_class} || "Chemistry::Bond";
+
+    # these two are not used yet...
+    my $atom_class = $opts{atom_class} || $mol_class->atom_class;
+    my $bond_class = $opts{bond_class} || $mol_class->bond_class;
 
     my (@lines) = split /(?:\n|\r\n?)/, $string;
     my @mols;
@@ -97,6 +118,11 @@ sub parse_string {
         my $mol = $mol_class->new;
         $Smiles_parser->parse($smiles, $mol);
         $mol->name($name);
+        add_implicit_hydrogens($mol);
+        if ($opts{kekulize}) {
+            assign_bond_orders($mol, method => "itub", use_coords => 0, 
+                scratch => 0, charges => 0);
+        }
         return $mol unless wantarray;
         push @mols, $mol;
     }
@@ -156,6 +182,11 @@ my %type_to_order = (
     '.' => 0,
 );
 
+my %ORGANIC_ELEMS = (
+    Br => 1, Cl => 1, B => 3, C => 4, N => 3, O => 2, P => 3, S => 2, 
+    F => 1, I => 1, s => 1, p => 1, o => 1, n => 1, c => 1, b => 1,
+);
+
 #=item Chemistry::Smiles->new([add_atom => \&sub1, add_bond => \&sub2])
 #
 #Create a SMILES parser. If the add_atom and add_bond subroutine references
@@ -186,8 +217,7 @@ sub new {
 #=cut
 
 sub parse {
-    my $self = shift;
-    my ($s, $mol) = @_;
+    my ($self, $s, $mol) = @_;
     $self->{stack} = [ undef ];
     $self->{digits} = {};
 
@@ -203,7 +233,7 @@ sub parse {
         } elsif ($sym) { # Simple atom
             no warnings;
             my @digs = parse_digits($dig);
-            $self->atom($mol, $bnd, '', $sym, '', '', '', \@digs);
+            $self->atom($mol, $bnd, '', $sym, '', undef, '', \@digs);
         } elsif ($sym2) { # Complex atom
             no warnings;
             my @digs = parse_digits($dig);
@@ -278,11 +308,15 @@ sub atom {
 # Default add_atom callback 
 sub add_atom {
     my ($mol, $iso, $sym, $chir, $hcount, $chg) = @_;
-    my $atom = $mol->new_atom(symbol=>$sym);
+    my $atom = $mol->new_atom(symbol => ucfirst $sym);
     $iso && $atom->attr('smiles/isotope' => $iso);
+    $iso && $atom->mass($iso);
     $chir && $atom->attr('smiles/chirality' => $chir);
-    length $hcount && $atom->attr('smiles/h_count' => $hcount);
-    $chg && $atom->attr('smiles/charge' => $chg);
+    defined $hcount && $atom->hydrogens($hcount);
+    $chg && $atom->formal_charge($chg);
+    if ($sym =~ /^[a-z]/) {
+        $atom->attr("smiles/aromatic", 1);
+    }
     $atom;
 }
 
@@ -319,17 +353,23 @@ sub end_branch {
     #print "end_branch\n";
     pop @{$self->{stack}};
 }
+ 
+sub add_implicit_hydrogens {
+    my ($mol) = @_;
+    for my $atom ($mol->atoms) {
+        #print "H=".$atom->hydrogens."\n";
+        unless (defined $atom->hydrogens) {
+            my $h_count = $ORGANIC_ELEMS{$atom->symbol} - $atom->valence;
+            $h_count = 0 if $h_count < 0;
+            if ($atom->attr("smiles/aromatic") and $atom->symbol =~ /^[CN]$/) {
+                $h_count--;
+            }
+            $atom->hydrogens($h_count);
+        }
+    }
+}
 
 ##### SMILES WRITER ########
-
-my %ORDER_TO_TYPE = (
-    2 => '=', 1 => '', 3 => '#',
-);
-
-my %ORGANIC_ELEMS = (
-    Br => 1, Cl => 1, B => 1, C => 1, N => 1, O => 1, P => 1, S => 1, 
-    F => 1, I => 1, s => 1, p => 1, o => 1, n => 1, c => 1, b => 1,
-);
 
 sub write_string {
     my ($self, $mol_ref, %opts) = @_;
@@ -348,11 +388,35 @@ sub write_string {
     for my $mol (@mols) {
         $mol = $mol->clone; 
         collapse_hydrogens($mol);
+        my @atoms = $mol->atoms; 
 
-        my $atom = $mol->atoms(1);
-        my $ring_atoms = {};
-        find_ring_bonds($mol, $atom, undef, {}, $ring_atoms);
-        $smiles .= branch($mol, $atom, undef, {}, $ring_atoms);
+        if ($opts{unique}) {
+            unless ($atoms[0]->attr("canon/class")) {
+                require Chemistry::Canonicalize;
+                Chemistry::Canonicalize::canonicalize($mol);
+            }
+            $opts{aromatic} = 1; # all unique smiles have to be aromatic
+            @atoms = sort {
+                $a->attr("canon/class") <=> $b->attr("canon/class")
+            } @atoms;
+        }
+
+        aromatize($mol) if $opts{aromatic};
+
+        my $visited = {};
+        my @s;
+        for my $atom (@atoms) {
+            next if $visited->{$atom};
+            my $ring_atoms = {};
+
+            # first pass to find and number the ring bonds
+            find_ring_bonds($mol, \%opts, $atom, undef, {}, $ring_atoms);
+
+            # second pass to actually generate the SMILES string
+            push @s, branch($mol, \%opts, $atom, undef, $visited, $ring_atoms);
+        }
+        $smiles .= join '.', @s;
+
         if ($opts{name}) {
             $smiles .= "\t" . $mol->name;
         }
@@ -362,10 +426,10 @@ sub write_string {
 }
 
 sub find_ring_bonds {
-    my ($mol, $atom, $from_bond, $visited, $ring_atoms) = @_;
+    my ($mol, $opts, $atom, $from_bond, $visited, $ring_atoms) = @_;
 
     $visited->{$atom}  = 1;
-    for my $bn ($atom->bonds_neighbors) {
+    for my $bn (sorted_bonds_neighbors($atom, $opts)) {
         my $nei  = $bn->{to};
         my $bond = $bn->{bond};
         next if $visited->{$bond};
@@ -374,25 +438,19 @@ sub find_ring_bonds {
             #print "closing ring\n";
             $ring_atoms->{$nei}++;
         } else {
-            find_ring_bonds($mol, $nei, $bond, $visited, $ring_atoms);
+            find_ring_bonds($mol, $opts, $nei, $bond, $visited, $ring_atoms);
         }
     }
 }
 
 sub branch {
-    my ($mol, $atom, $from_bond, $visited, $digits) = @_;
+    my ($mol, $opts, $atom, $from_bond, $visited, $digits) = @_;
 
     my $prev_branch = "";
     my $smiles;
-    $smiles .= $ORDER_TO_TYPE{$from_bond->order} if $from_bond;
+    $smiles .= bond_symbol($from_bond, $opts);
     $digits->{count}++;
-    if ($ORGANIC_ELEMS{$atom->symbol}) {
-        $smiles .= $atom->symbol;
-    } else {
-        my $h_count = $atom->attr("smiles/h_count");
-        $h_count = $h_count ? ($h_count > 1 ? "H$h_count" : 'H') : '';
-        $smiles .= "[" . $atom->symbol . "$h_count]";
-    }
+    $smiles .= format_atom($atom, $opts);
     if ($digits->{$atom}) {  # opening a ring
         my @d;
         for (1 .. $digits->{$atom}) {
@@ -403,19 +461,19 @@ sub branch {
     }
 
     $visited->{$atom}  = 1;
-    for my $bn ($atom->bonds_neighbors) {
+    for my $bn (sorted_bonds_neighbors($atom, $opts)) {
         my $nei  = $bn->{to};
         my $bond = $bn->{bond};
         next if $visited->{$bond};
         $visited->{$bond} = 1;
         if ($visited->{$nei}) { # closed a ring
             my $digit = shift @{$digits->{$nei}};
-            $smiles .= $ORDER_TO_TYPE{$bond->order};
+            $smiles .= bond_symbol($bond, $opts);
             $smiles .= $digit < 10 ? $digit : "%$digit";
             $digits->{used_digits}[$digit] = 0; # free for future use
             $visited->{$bond} = 1;
         } else {
-            my $branch = branch($mol, $nei, $bond, $visited, $digits);
+            my $branch = branch($mol, $opts, $nei, $bond, $visited, $digits);
             if ($prev_branch) {
                 $smiles .= "($prev_branch)";
             }
@@ -449,21 +507,80 @@ sub collapse_hydrogens {
     }
 }
 
+sub aromatize {
+    my ($mol) = @_;
+
+    require Chemistry::Ring::Find;
+
+    for my $atom ($mol->atoms) {
+        my @rings = Chemistry::Ring::Find::find_ring(
+            $atom, all => 1, min => 5, max => 7);
+        for my $ring (@rings) {
+            if ($ring->is_aromatic) {
+                for my $ring_elem ($ring->atoms, $ring->bonds) {
+                    $ring_elem->aromatic(1);
+                }
+            }
+        }
+    }
+}
+
+sub sorted_bonds_neighbors {
+    my ($atom, $opts) = @_;
+    my @bn = $atom->bonds_neighbors;
+    if ($opts->{unique}) {
+        @bn = sort { 
+            $a->{to}->attr("canon/class") <=> $b->{to}->attr("canon/class") 
+        } @bn;
+    }
+    @bn;
+}
+
+my %ORDER_TO_TYPE = (
+    2 => '=', 1 => '', 3 => '#',
+);
+
+sub bond_symbol {
+    my ($bond, $opts) = @_;
+    return '' unless $bond;
+    return '' if $opts->{aromatic} && $bond->aromatic;
+    return $ORDER_TO_TYPE{$bond->order};
+}
+
+sub format_atom {
+    my ($atom, $opts) = @_;
+    my $s;
+    if ($ORGANIC_ELEMS{$atom->symbol} && !$atom->formal_charge) {
+        $s = $atom->symbol;
+        if ($opts->{aromatic} && $atom->aromatic) {
+            $s = lc $s;
+        }
+    } else {
+        my $h_count = $atom->hydrogens;
+        my $charge  = $atom->formal_charge;
+        my $symbol  = $atom->symbol;
+        my $iso     = $atom->attr("smiles/isotope") || '';
+
+        $charge  = $charge ? sprintf("%+d", $charge): '';
+        $h_count = $h_count ? ($h_count > 1 ? "H$h_count" : 'H') : '';
+
+        $s = "[$iso$symbol$h_count$charge]";
+    }
+    $s;
+}
+
 
 1;
 
 =head1 CAVEATS
 
-Branches that start before an atom, such as (OC)C, which should be equivalent
-to C(CO) and COC, according to some variants of the SMILES specification. Many
-other tools don't implement this rule either.
-
-Not yet available: Proper handling of aromatic atoms;  unique (canonical)
-SMILES output.
+Reading branches that start before an atom, such as (OC)C, which should be
+equivalent to C(OC) and COC, according to some variants of the SMILES
+specification. Many other tools don't implement this rule either.
 
 =head1 VERSION
 
-0.33
+0.40
 
 =head1 SEE ALSO
 

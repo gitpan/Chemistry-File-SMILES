@@ -11,6 +11,6 @@ plan tests => scalar @smiles;
 for my $smiles (@smiles) {
     chomp $smiles;
     my $mol = Chemistry::Mol->parse($smiles, format => 'smiles');
-    my $out = $mol->print(format => 'smiles');
+    my $out = $mol->print(format => 'smiles', aromatic => 1);
     is($out, $smiles, "$smiles");
 }

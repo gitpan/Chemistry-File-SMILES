@@ -14,6 +14,7 @@ BEGIN {
 use Chemistry::File::SMILES;
 ok(1); # If we made it this far, we're ok.
 
+no warnings 'uninitialized';
 my $parser = Chemistry::File::SMILES->new(
     add_atom => sub {
         my $c=shift; 
