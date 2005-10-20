@@ -1,11 +1,12 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.44";
-# $Id: SMILES.pm,v 1.14 2005/03/29 23:48:34 itubert Exp $
+$VERSION = "0.45";
+# $Id: SMILES.pm,v 1.15 2005/10/20 20:58:21 itubert Exp $
 
 use 5.006;
 use strict;
 use warnings;
+no warnings 'recursion';
 use base "Chemistry::File";
 use Chemistry::Mol;
 use Chemistry::Bond::Find 'assign_bond_orders';
@@ -408,6 +409,8 @@ sub end_branch {
     pop @{$self->{stack}};
 }
  
+# returns the number of hydrogens for an atom, assuming it has
+# no charge or radical (because those require an explicit H-count anyway)
 sub calc_implicit_hydrogens {
     my ($self, $atom) = @_;
     no warnings 'uninitialized';
@@ -419,6 +422,9 @@ sub calc_implicit_hydrogens {
     $h_count;
 }
 
+# returns the number of hydrogens that an atom should have,
+# taking into account that it may or may not have a few hydrogens 
+# defined already. This assumes that the atom is neutral and not radical
 sub calc_implicit_hydrogens_2 {
     my ($self, $atom) = @_;
     my $h_count = $ORGANIC_ELEMS{$atom->symbol} - $atom->valence 
@@ -657,7 +663,7 @@ with explicitly low hydrogen counts.
 
 =head1 VERSION
 
-0.44
+0.45
 
 =head1 SEE ALSO
 

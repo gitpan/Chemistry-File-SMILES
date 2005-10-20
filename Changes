@@ -1,5 +1,8 @@
 Revision history for Perl extension Chemistry::File::SMILES
 
+0.45  Oct 20 2005
+        - Silence deep recursion warnings.
+
 0.44  Mar 29 2005
         - Fixed memory leak that prevented the last atom from being garbage
           collected.

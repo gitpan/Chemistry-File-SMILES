@@ -1,4 +1,4 @@
-Chemistry::File::SMILES version 0.44
+Chemistry::File::SMILES version 0.45
 ====================================
 
 This object-oriented module parses and produces SMILES (Simplified Molecular
@@ -8,9 +8,8 @@ Toolkit (http://www.perlmol.org/).
 For more information about SMILES, see The SMILES Home Page at
 http://www.daylight.com/dayhtml/smiles/
 
-CHANGES SINCE VERSION 0.43
-    - Fixed memory leak that prevented the last atom from being garbage
-      collected.
+CHANGES SINCE VERSION 0.44
+        - Silence deep recursion warnings.
 
 INSTALLATION
 
