@@ -1,5 +1,9 @@
 Revision history for Perl extension Chemistry::File::SMILES
 
+0.46  May 10 2009
+        - Added a couple of non-standard symbols for convenient pseudo-atoms 
+          R and X. (Liliana Felix Avila)
+
 0.45  Oct 20 2005
         - Silence deep recursion warnings.
 
