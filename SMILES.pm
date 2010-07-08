@@ -1,6 +1,6 @@
 package Chemistry::File::SMILES;
 
-$VERSION = "0.46";
+$VERSION = "0.47";
 # $Id: SMILES.pm,v 1.16 2009/05/10 20:31:08 itubert Exp $
 
 use 5.006;
@@ -293,7 +293,7 @@ sub parse {
                     $chg = ($chg =~ /-/) ? -length($chg) : length($chg);
                 }
                 $self->atom($mol, $bnd, $iso, $sym2, $chir, $hcnt || 0, 
-                    $chg, \@digs, $name);
+                    $chg || 0, \@digs, $name);
             } else {
                 die "SMILES ERROR: '$all in $s'\n";
             }
@@ -663,7 +663,7 @@ with explicitly low hydrogen counts.
 
 =head1 VERSION
 
-0.46
+0.47
 
 =head1 SEE ALSO
 

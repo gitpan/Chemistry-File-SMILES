@@ -1,4 +1,4 @@
-Chemistry::File::SMILES version 0.46
+Chemistry::File::SMILES version 0.47
 ====================================
 
 This object-oriented module parses and produces SMILES (Simplified Molecular
@@ -9,8 +9,8 @@ For more information about SMILES, see The SMILES Home Page at
 http://www.daylight.com/dayhtml/smiles/
 
 CHANGES SINCE VERSION 0.45
-        - Added a couple of non-standard symbols for convenient pseudo-atoms 
-          R and X. (Liliana Felix Avila)
+        - Fix a test failure in perl-5.12 and later, caused by incompatible
+          changes in the way perl treats length(undef).
 
 INSTALLATION
 

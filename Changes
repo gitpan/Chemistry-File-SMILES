@@ -1,5 +1,9 @@
 Revision history for Perl extension Chemistry::File::SMILES
 
+0.47  July 7 2010
+        - Fix a test failure in perl-5.12, and later caused by incompatible
+          changes in the way perl treats length(undef).
+
 0.46  May 10 2009
         - Added a couple of non-standard symbols for convenient pseudo-atoms 
           R and X. (Liliana Felix Avila)
